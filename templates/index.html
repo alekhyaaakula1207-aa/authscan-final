@@ -1,1 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthScan — Authentication Detector</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 30px 20px 60px;
+    }
+
+    h1 {
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    header p {
+      color: #666;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+
+    .input-area {
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .input-area label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: #555;
+    }
+
+    button.btn {
+      padding: 9px 20px;
+      background: #222;
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      cursor: pointer;
+    }
+
+    button.btn:hover:not(:disabled) {
+      background: #444;
+    }
+
+    button.btn:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    .presets {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .presets span {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .chip {
+      padding: 4px 10px;
+      border: 1px solid #bbb;
+      background: none;
+      font-size: 12px;
+      cursor: pointer;
+      color: #444;
+    }
+
+    .chip:hover {
+      border-color: #444;
+      color: #000;
+    }
+
+    .status {
+      display: none;
+      padding: 8px 12px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    .status.on {
+      display: block;
+    }
+
+    .status.scanning {
+      border-color: #f0a500;
+      background: #fffbee;
+      color: #7a5500;
+    }
+
+    .status.ok {
+      border-color: #4caf50;
+      background: #f0fff2;
+      color: #2a6e2a;
+    }
+
+    .status.err {
+      border-color: #f44336;
+      background: #fff0f0;
+      color: #7a1a1a;
+    }
+
+    .results-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 12px;
+    }
+
+    .results-hdr h2 {
+      font-size: 16px;
+    }
+
+    .results-hdr span {
+      font-size: 12px;
+      color: #888;
+    }
+
+    .rcard {
+      background: #fff;
+      border: 1px solid #ccc;
+      margin-bottom: 12px;
+    }
+
+    .rcard-hdr {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    .rcard-hdr:hover {
+      background: #f9f9f9;
+    }
+
+    .rcard-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      background: #222;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 10px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .sname {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .surl {
+      font-size: 11px;
+      color: #888;
+      margin-top: 2px;
+      word-break: break-all;
+    }
+
+    .rcard-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+      margin-left: 12px;
+    }
+
+    .badge {
+      font-size: 10px;
+      padding: 2px 8px;
+      border: 1px solid;
+      text-transform: uppercase;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+
+    .badge.found {
+      color: #2e7d32;
+      border-color: #2e7d32;
+      background: #f0fff2;
+    }
+
+    .badge.notfound {
+      color: #888;
+      border-color: #ccc;
+    }
+
+    .badge.error {
+      color: #c62828;
+      border-color: #c62828;
+      background: #fff0f0;
+    }
+
+    .badge.scanning {
+      color: #7a5500;
+      border-color: #f0a500;
+      background: #fffbee;
+    }
+
+    .badge.meta {
+      color: #555;
+      border-color: #bbb;
+      font-size: 9px;
+    }
+
+    .chev {
+      color: #888;
+      font-size: 13px;
+      transition: transform .2s;
+    }
+
+    .chev.open {
+      transform: rotate(180deg);
+    }
+
+    .rbody {
+      display: none;
+    }
+
+    .rbody.open {
+      display: block;
+    }
+
+    .rinner {
+      padding: 16px;
+    }
+
+    .sec {
+      margin-bottom: 16px;
+    }
+
+    .sec-label {
+      font-size: 11px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #555;
+      margin-bottom: 6px;
+      letter-spacing: 1px;
+    }
+
+    .infobox {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #444;
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      padding: 10px 12px;
+      word-break: break-word;
+    }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 3px 10px;
+      background: #eef0ff;
+      border: 1px solid #aab0ee;
+      color: #2a3aaa;
+    }
+
+    .code {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #333;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 12px;
+      overflow-x: auto;
+      white-space: pre;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+
+    .cact {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 6px;
+    }
+
+    .btn-copy {
+      padding: 5px 12px;
+      border: 1px solid #ccc;
+      background: none;
+      font-size: 12px;
+      cursor: pointer;
+      color: #444;
+    }
+
+    .btn-copy:hover {
+      border-color: #444;
+    }
+
+    .btn-copy.ok {
+      border-color: #4caf50;
+      color: #2e7d32;
+    }
+
+    .empty {
+      display: none;
+      text-align: center;
+      padding: 60px 20px;
+      color: #aaa;
+    }
+
+    .empty.on {
+      display: block;
+    }
+
+    .empty h3 {
+      font-size: 16px;
+      margin-bottom: 6px;
+      color: #bbb;
+    }
+
+    .empty p {
+      font-size: 13px;
+    }
+
+    @media(max-width:540px) {
+      .row {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header>
+      <h1>AuthScan</h1>
+      <p>Authentication Component Detector — paste a URL to find its login form HTML</p>
+    </header>
+
+    <div class="input-area">
+      <label for="sUrl">Target URL</label>
+      <div class="row">
+        <input type="text" id="sUrl" placeholder="https://example.com/login" autocomplete="off" spellcheck="false">
+        <button class="btn" id="sBtn" onclick="doScan()">Scan</button>
+      </div>
+      <div class="presets">
+        <span>Presets:</span>
+        <button class="chip" onclick="ps('https://github.com/login')">GitHub</button>
+        <button class="chip" onclick="ps('https://www.reddit.com/login')">Reddit</button>
+        <button class="chip" onclick="ps('https://stackoverflow.com/users/login')">Stack Overflow</button>
+        <button class="chip" onclick="ps('https://wordpress.com/log-in')">WordPress</button>
+        <button class="chip" onclick="ps('https://www.netflix.com/login')">Netflix</button>
+        <button class="chip" onclick="ps('https://login.microsoftonline.com')">Microsoft</button>
+        <button class="chip" onclick="ps('https://www.dropbox.com/login')">Dropbox</button>
+      </div>
+    </div>
+
+    <div class="status" id="statusBar"></div>
+
+    <div id="resSection" style="display:none">
+      <div class="results-hdr">
+        <h2>Scan Results</h2>
+        <span id="rMeta"></span>
+      </div>
+      <div id="resList"></div>
+    </div>
+
+    <div class="empty on" id="emptyState">
+      <h3>No scans yet</h3>
+      <p>Enter a URL above or pick a preset to begin</p>
+    </div>
+
+  </div>
+
+  <script>
+    let N = 0;
+    const RAW = {};
+
+    function ps(u) {
+      document.getElementById('sUrl').value = u;
+      document.getElementById('sUrl').focus();
+    }
+
+    function setStatus(type, txt) {
+      const b = document.getElementById('statusBar');
+      b.className = 'status on ' + type;
+      b.textContent = txt;
+    }
+
+    function esc(s) {
+      return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function pretty(html) {
+      if (!html) return '';
+      let out = '', ind = 0;
+      for (let p of html.replace(/>\s*</g, '>\n<').split('\n')) {
+        p = p.trim();
+        if (!p) continue;
+        if (p.match(/^<\/[\w]/)) ind = Math.max(0, ind - 1);
+        out += '  '.repeat(ind) + p + '\n';
+        if (p.match(/^<[\w]/) && !p.match(/\/>$/) && !p.match(/<\/[\w]/)) ind++;
+      }
+      return out.trim();
+    }
+
+    function buildCard(id, url, d) {
+      let host = url;
+      try { host = new URL(url).hostname.replace('www.', ''); } catch { }
+      const init = host.split('.')[0].slice(0, 3).toUpperCase();
+
+      let badge, body;
+
+      if (d._loading) {
+        badge = '<span class="badge scanning">Scanning...</span>';
+        body = '<div class="rinner"><div class="infobox">Fetching HTML and detecting authentication components...</div></div>';
+      } else if (d.error) {
+        badge = '<span class="badge error">Error</span>';
+        body = `<div class="rinner"><div class="infobox" style="color:#c62828">${esc(d.error)}</div></div>`;
+      } else if (!d.found) {
+        badge = '<span class="badge notfound">Not Found</span>';
+        body = `<div class="rinner"><div class="infobox">
+        No authentication component found in the page HTML.<br><br>
+        Possible reasons: login form loads via JavaScript, page redirects to a separate auth domain, or the site blocks scrapers.
+      </div></div>`;
+      } else {
+        badge = '<span class="badge found">Auth Found</span>';
+        const p = pretty(d.html_snippet || '');
+        const sid = 's-' + id;
+        RAW[sid] = p;
+        const tags = (d.fields || []).map(f => `<span class="tag">${esc(f)}</span>`).join('');
+        body = `
+        <div class="rinner">
+          ${d.auth_type ? `<div class="sec"><div class="sec-label">Auth Pattern</div><div class="infobox">${esc(d.auth_type)}</div></div>` : ''}
+          ${tags ? `<div class="sec"><div class="sec-label">Detected Fields</div><div class="tags">${tags}</div></div>` : ''}
+          <div class="sec">
+            <div class="sec-label">HTML Snippet${d.container_tag ? ` &lt;${esc(d.container_tag)}&gt;` : ''}</div>
+            <div class="code" id="${sid}">${esc(p)}</div>
+            <div class="cact"><button class="btn-copy" onclick="copySnip('${sid}',this)">Copy HTML</button></div>
+          </div>
+        </div>`;
+      }
+
+      const elapsed = d.elapsed ? `<span class="badge meta">${d.elapsed}s</span>` : '';
+      const kb = d.page_size_kb ? `<span class="badge meta">${d.page_size_kb}kb</span>` : '';
+
+      return `
+      <div class="rcard-hdr" onclick="tog('${id}')">
+        <div class="rcard-left">
+          <div class="avatar">${esc(init)}</div>
+          <div>
+            <div class="sname">${esc(host)}</div>
+            <div class="surl">${esc(url)}</div>
+          </div>
+        </div>
+        <div class="rcard-right">${elapsed}${kb}${badge}<span class="chev open" id="chev-${id}">▾</span></div>
+      </div>
+      <div class="rbody open" id="rb-${id}">${body}</div>`;
+    }
+
+    function insertCard(id, url, d) {
+      const c = document.createElement('div');
+      c.className = 'rcard';
+      c.id = id;
+      c.innerHTML = buildCard(id, url, d);
+      document.getElementById('resList').prepend(c);
+      document.getElementById('emptyState').classList.remove('on');
+      document.getElementById('resSection').style.display = 'block';
+    }
+
+    function updateCard(id, url, d) {
+      const c = document.getElementById(id);
+      if (c) c.innerHTML = buildCard(id, url, d);
+    }
+
+    function tog(id) {
+      document.getElementById('rb-' + id)?.classList.toggle('open');
+      document.getElementById('chev-' + id)?.classList.toggle('open');
+    }
+
+    function copySnip(sid, btn) {
+      navigator.clipboard.writeText(RAW[sid] || '').then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('ok');
+        setTimeout(() => { btn.textContent = 'Copy HTML'; btn.classList.remove('ok'); }, 2000);
+      });
+    }
+
+    function updateMeta() {
+      const n = document.querySelectorAll('.rcard').length;
+      document.getElementById('rMeta').textContent = n + ' scan' + (n !== 1 ? 's' : '');
+    }
+
+    async function doScan() {
+      let url = document.getElementById('sUrl').value.trim();
+      if (!url) return;
+      if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+      const btn = document.getElementById('sBtn');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+
+      let host = url;
+      try { host = new URL(url).hostname.replace('www.', ''); } catch { }
+      setStatus('scanning', 'Fetching ' + host + '...');
+
+      const cid = 'c' + (++N);
+      insertCard(cid, url, { _loading: true });
+      updateMeta();
+
+      try {
+        const res = await fetch('/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+        const data = await res.json();
+        updateCard(cid, url, data);
+        setStatus(
+          data.error ? 'err' : 'ok',
+          data.error ? 'Error: ' + data.error :
+            data.found ? 'Auth component found — ' + (data.auth_type || 'login form detected') :
+              'No auth component found on ' + host
+        );
+      } catch (e) {
+        updateCard(cid, url, { error: 'Network error: ' + e.message });
+        setStatus('err', 'Request failed: ' + e.message);
+      }
+
+      updateMeta();
+      btn.disabled = false;
+      btn.textContent = 'Scan';
+    }
+
+    document.getElementById('sUrl').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doScan();
+    });
+  </script>
+</body>
+
+</html>
